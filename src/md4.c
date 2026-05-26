@@ -38,7 +38,7 @@
  */
 
 #define WITH_BUFFER
-#include "hash-wasm.h"
+#include "wasm_crypto_hash.h"
 
 struct MD4_CTX {
   uint32_t lo, hi;

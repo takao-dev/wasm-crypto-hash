@@ -28,7 +28,7 @@
  */
 
 #define WITH_BUFFER
-#include "hash-wasm.h"
+#include "wasm_crypto_hash.h"
 
 #define RIPEMD160_BLOCK_LENGTH 64
 #define RIPEMD160_DIGEST_LENGTH 20

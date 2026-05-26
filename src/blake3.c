@@ -11,7 +11,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "hash-wasm.h"
+#include "wasm_crypto_hash.h"
 
 #define BLAKE3_VERSION_STRING "0.3.7"
 #define BLAKE3_KEY_LEN 32

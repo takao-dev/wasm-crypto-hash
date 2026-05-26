@@ -10,7 +10,7 @@
 //
 
 #define WITH_BUFFER
-#include "hash-wasm.h"
+#include "wasm_crypto_hash.h"
 #define bswap64 __builtin_bswap64
 
 const uint64_t Prime1 = 11400714785074694791ULL;

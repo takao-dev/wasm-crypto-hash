@@ -4,7 +4,7 @@
   Written for hash-wasm by Dani Biró
 */
 
-#include "hash-wasm.h"
+#include "wasm_crypto_hash.h"
 
 #define BYTES_PER_PAGE 65536
 

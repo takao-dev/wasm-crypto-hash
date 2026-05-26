@@ -14,7 +14,7 @@
 */
 
 #define WITH_BUFFER
-#include "hash-wasm.h"
+#include "wasm_crypto_hash.h"
 
 #define BLAKE2_PACKED(x) x __attribute__((packed))
 

@@ -7,7 +7,7 @@
 [![JSDelivr downloads](https://data.jsdelivr.com/v1/package/npm/wasm-crypto-hash/badge)](https://www.jsdelivr.com/package/npm/wasm-crypto-hash)
 
 Wasm Crypto Hash is a standalone WebAssembly-based cryptographic hash and checksum utility package for browsers and Node.js.
-It uses hand-tuned WebAssembly binaries to calculate cryptographic digests quickly.
+It is a separate implementation that uses hand-tuned WebAssembly binaries to calculate cryptographic digests quickly.
 Inspired by [hash-wasm](https://github.com/Daninet/hash-wasm) and the same practical, small-bundle philosophy.
 
 # Supported algorithms

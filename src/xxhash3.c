@@ -38,7 +38,7 @@
 #define WITH_BUFFER
 #include <stddef.h>
 
-#include "hash-wasm.h"
+#include "wasm_crypto_hash.h"
 
 typedef uint8_t xxh_u8;
 typedef uint32_t XXH32_hash_t;

@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #define WITH_BUFFER
-#include "hash-wasm.h"
+#include "wasm_crypto_hash.h"
 
 #define bswap_64(x) __builtin_bswap64(x)
 

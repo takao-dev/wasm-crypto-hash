@@ -46,7 +46,7 @@
  */
 
 #define WITH_BUFFER
-#include "hash-wasm.h"
+#include "wasm_crypto_hash.h"
 
 typedef unsigned int BF_word;
 typedef signed int BF_word_signed;

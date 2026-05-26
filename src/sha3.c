@@ -20,7 +20,7 @@
  */
 
 #define WITH_BUFFER
-#include "hash-wasm.h"
+#include "wasm_crypto_hash.h"
 
 #define NumberOfRounds 24
 #define sha3_max_permutation_size 25

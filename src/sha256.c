@@ -18,7 +18,7 @@
  */
 
 #define WITH_BUFFER
-#include "hash-wasm.h"
+#include "wasm_crypto_hash.h"
 
 #define sha256_block_size 64
 #define sha256_hash_size 32

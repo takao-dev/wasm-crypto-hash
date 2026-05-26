@@ -8,7 +8,7 @@
 
 
 #define WITH_BUFFER
-#include "hash-wasm.h"
+#include "wasm_crypto_hash.h"
 
 #define SM3_DIGEST_LEN  32
 
