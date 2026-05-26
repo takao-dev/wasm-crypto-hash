@@ -1,0 +1,44 @@
+{
+  "@biomejs/biome": {
+    "current": "1.9.4",
+    "wanted": "1.9.4",
+    "latest": "2.4.15",
+    "dependent": "hash-wasm",
+    "location": "C:\\dev\\houkago-link\\package\\hash-wasm\\node_modules\\@biomejs\\biome"
+  },
+  "@types/jest": {
+    "current": "29.5.14",
+    "wanted": "29.5.14",
+    "latest": "30.0.0",
+    "dependent": "hash-wasm",
+    "location": "C:\\dev\\houkago-link\\package\\hash-wasm\\node_modules\\@types\\jest"
+  },
+  "@types/node": {
+    "current": "22.19.19",
+    "wanted": "22.19.19",
+    "latest": "25.9.1",
+    "dependent": "hash-wasm",
+    "location": "C:\\dev\\houkago-link\\package\\hash-wasm\\node_modules\\@types\\node"
+  },
+  "binaryen": {
+    "current": "120.0.0",
+    "wanted": "120.0.0",
+    "latest": "129.0.0",
+    "dependent": "hash-wasm",
+    "location": "C:\\dev\\houkago-link\\package\\hash-wasm\\node_modules\\binaryen"
+  },
+  "jest": {
+    "current": "29.7.0",
+    "wanted": "29.7.0",
+    "latest": "30.4.2",
+    "dependent": "hash-wasm",
+    "location": "C:\\dev\\houkago-link\\package\\hash-wasm\\node_modules\\jest"
+  },
+  "typescript": {
+    "current": "5.9.3",
+    "wanted": "5.9.3",
+    "latest": "6.0.3",
+    "dependent": "hash-wasm",
+    "location": "C:\\dev\\houkago-link\\package\\hash-wasm\\node_modules\\typescript"
+  }
+}

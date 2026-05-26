@@ -1,0 +1,8 @@
+{
+  "name": "example-prod-wasm",
+  "data": "AGFzbQEAAAA=",
+  "hash": "",
+  "sig_algo": "pss",
+  "sig": "FEdrvv65elB6GKkH8jSyrTFsFPgU3gfZWfz/bHzo3eVdrz4fP+4kvoPRVQFhSPWu7RUQh8w8iTLk+4Fp1ogbDJH47CIRnACMpSJaxScdr8XA0ZUekiLAIwfNzX1M+FB+Brb9CCONhCS89wr0Jt/2jPJy7SM92aNx71R2rIFYvdjVOaPYVwzqdD6MI0SbcdF0mjgQ8PF0+TkkK8mkf4KJvQJhl9JnYshElCGYjZSSop+bIn1fSfwajsbyYLGXQlvw7goqQqftjjNUNyNUU4Gzj6Z3btyRro4JZFo+LtYtJamGWvHPvm7mxNWdTHJnBYaXGNOUI+FDOR+TlPXtIiHHgg==",
+  "pubkey": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA8eOHQ3hJ9W990+jMkkJE\ntpPIv0yr8J4jrv14MePzwoVMr+rEm00FwBDRAicReEHCz506xqiylprrI+YLsdfw\nnLf2lH3EJmHap7otlCcS7f/1Nd/uzWsSQyHSiOBSJqXSGY/oa9FXLvz9l7GEM2wq\nvu/iUWcM6sOjK6ui57ZKJi6S8GXCKPvjv1Et/igUxThbqwA7wxSsN65EzLZg3Eks\nFHkQ/T703cCOiBu74YJMAK0kSKJuwdvPLf3g0mNQ+gdVUawBezuWuFBmr8LNiXgw\nOcB7ohbN2e1PpQpNbbMjpqW8prF7ZpMBUpb198wEK1fUpcxHB9Y+G+o9a+IgUX9U\nowIDAQAB\n-----END PUBLIC KEY-----\n"
+}
