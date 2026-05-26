@@ -16,25 +16,20 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd package/hash-wasm
           npm ci
 
       - name: Build package
         run: |
-          cd package/hash-wasm
           npm run build
 
       - name: Generate self-signed example and sign
         run: |
-          cd package/hash-wasm
           node ./scripts/generate_signed_wasm_local.js
 
       - name: Verify local signed artifact
         run: |
-          cd package/hash-wasm
           node ./scripts/verify_local_signed.js
 
       - name: Run tests
         run: |
-          cd package/hash-wasm
           npm test --silent
