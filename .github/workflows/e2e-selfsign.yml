@@ -1,0 +1,35 @@
+name: E2E self-signed WASM signing and verification
+on:
+  workflow_dispatch:
+
+jobs:
+  selfsign:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: |
+          npm ci
+
+      - name: Build package
+        run: |
+          npm run build
+
+      - name: Generate self-signed example and sign
+        run: |
+          node ./scripts/generate_signed_wasm_local.js
+
+      - name: Verify local signed artifact
+        run: |
+          node ./scripts/verify_local_signed.js
+
+      - name: Run tests
+        run: |
+          npm test --silent
