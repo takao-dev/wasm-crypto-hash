@@ -244,13 +244,8 @@ export function canonicalizeWasmForSigning(obj: any): Uint8Array {
  * compatible with Node.js 18+, modern browsers, and Cloudflare Workers.
  */
 export function getCrypto(): any {
-	if (typeof globalThis !== "undefined" && (globalThis as any).crypto?.subtle) return (globalThis as any).crypto;
-	if (typeof crypto !== "undefined" && (crypto as any)?.subtle) return crypto;
-	try {
-		return require("node:crypto").webcrypto;
-	/* node:coverage disable */
-	} catch {
-		return null;
+	if (typeof globalThis !== "undefined" && (globalThis as any).crypto?.subtle) {
+		return (globalThis as any).crypto;
 	}
-	/* node:coverage enable */
+	return require("node:crypto").webcrypto;
 }
