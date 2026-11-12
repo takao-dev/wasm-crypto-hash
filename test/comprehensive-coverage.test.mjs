@@ -18,15 +18,10 @@ import {
   xxhash64, createXXHash64,
   xxhash3, createXXHash3,
   xxhash128, createXXHash128,
-  kmac256,
-  sipHash24,
-  murmurHash3_32, murmurHash3_128,
-  xchacha20Poly1305Encrypt, xchacha20Poly1305Decrypt,
   bcrypt, bcryptVerify,
   scrypt,
   pbkdf2,
   argon2i, argon2d, argon2id, argon2Verify,
-  hotp, totp, verifyTotp,
   blake2b, createBLAKE2b,
   blake2s, createBLAKE2s,
   blake3, createBLAKE3,
@@ -37,7 +32,7 @@ import {
   entropyToMnemonic, generateMnemonic,
   aesKeyWrap, aesKeyUnwrap,
   poseidonHash,
-  shamirSplit, shamirCombine,
+  shamirSplit,
 } from '../dist/lib/index.js';
 
 import {
