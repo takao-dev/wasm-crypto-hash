@@ -21,7 +21,7 @@ import {
   bcrypt, bcryptVerify,
   scrypt,
   pbkdf2,
-  argon2i, argon2d, argon2id, argon2Verify,
+  argon2i, argon2d, argon2Verify,
   blake2b, createBLAKE2b,
   blake2s, createBLAKE2s,
   blake3, createBLAKE3,
