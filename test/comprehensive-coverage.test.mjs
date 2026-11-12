@@ -43,6 +43,7 @@ import {
   writeHexToUInt8,
   timingSafeEqualString,
   verifyRsaSignatureBase64,
+  getCrypto,
 } from '../dist/lib/util.js';
 
 test('Hasher state save and load for all streaming hash algorithms', async () => {
@@ -497,21 +498,24 @@ test('Poseidon 0x hex string and environment fallbacks', async () => {
   assert.match(hHex, /^[0-9a-f]{64}$/);
 
   // Missing getRandomValues error path
-  const origGetRandomValues = globalThis.crypto.getRandomValues;
-  try {
-    Object.defineProperty(globalThis.crypto, 'getRandomValues', { value: undefined, configurable: true });
-    await assert.rejects(() => generateMnemonic(128), /Cryptographically secure random number generator/);
-    assert.throws(() => shamirSplit('secret', 3, 2), /Cryptographically secure random number generator/);
-  } finally {
-    Object.defineProperty(globalThis.crypto, 'getRandomValues', { value: origGetRandomValues, configurable: true });
+  const cryptoObj = getCrypto();
+  const origGetRandomValues = cryptoObj ? cryptoObj.getRandomValues : undefined;
+  if (cryptoObj) {
+    try {
+      Object.defineProperty(cryptoObj, 'getRandomValues', { value: undefined, configurable: true });
+      await assert.rejects(() => generateMnemonic(128), /Cryptographically secure random number generator/);
+      assert.throws(() => shamirSplit('secret', 3, 2), /Cryptographically secure random number generator/);
+    } finally {
+      Object.defineProperty(cryptoObj, 'getRandomValues', { value: origGetRandomValues, configurable: true });
+    }
   }
 
   // getCrypto fallback to node:crypto.webcrypto when globalThis.crypto is undefined
   const origCryptoObj = globalThis.crypto;
   try {
     Object.defineProperty(globalThis, 'crypto', { value: undefined, configurable: true });
-    const { getCrypto } = await import('../dist/lib/util.js');
-    const c = getCrypto();
+    const { getCrypto: getCryptoUtil } = await import('../dist/lib/util.js');
+    const c = getCryptoUtil();
     assert.ok(c && c.subtle);
   } finally {
     Object.defineProperty(globalThis, 'crypto', { value: origCryptoObj, configurable: true });
