@@ -1,15 +1,8 @@
 function getGlobal() {
-	if (typeof globalThis !== "undefined") return globalThis;
-	if (typeof self !== "undefined") return self;
-	if (typeof window !== "undefined") return window;
-	return global;
+	return typeof globalThis !== "undefined" ? globalThis : global;
 }
 
-const globalObject = getGlobal();
-const nodeBuffer = globalObject.Buffer ?? null;
-const textEncoder = globalObject.TextEncoder
-	? new globalObject.TextEncoder()
-	: null;
+const textEncoder = new TextEncoder();
 
 export type ITypedArray = Uint8Array | Uint16Array | Uint32Array;
 export type IDataType = string | ITypedArray;
@@ -71,35 +64,17 @@ export function getDigestHex(
 	return String.fromCharCode.apply(null, tmpBuffer);
 }
 
-export const getUInt8Buffer =
-	nodeBuffer !== null
-		? (data: IDataType): Uint8Array => {
-				if (typeof data === "string") {
-					const buf = nodeBuffer.from(data, "utf8");
-					return new Uint8Array(buf.buffer, buf.byteOffset, buf.length);
-				}
+export const getUInt8Buffer = (data: IDataType): Uint8Array => {
+	if (typeof data === "string") {
+		return textEncoder.encode(data);
+	}
 
-				if (nodeBuffer.isBuffer(data)) {
-					return new Uint8Array(data.buffer, data.byteOffset, data.length);
-				}
+	if (ArrayBuffer.isView(data)) {
+		return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+	}
 
-				if (ArrayBuffer.isView(data)) {
-					return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
-				}
-
-				throw new Error("Invalid data type!");
-			}
-		: (data: IDataType): Uint8Array => {
-				if (typeof data === "string") {
-					return textEncoder.encode(data);
-				}
-
-				if (ArrayBuffer.isView(data)) {
-					return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
-				}
-
-				throw new Error("Invalid data type!");
-			};
+	throw new Error("Invalid data type!");
+};
 
 const base64Chars =
 	"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -204,67 +179,23 @@ export function timingSafeEqualString(a: string, b: string): boolean {
 }
 
 export async function computeSHA256Hex(data: Uint8Array): Promise<string> {
-	// Prefer Web Crypto if available
 	const g = getGlobal();
-	if (g.crypto && g.crypto.subtle && (g.crypto.subtle as any).digest) {
-		const dataBuf = new Uint8Array(data).slice().buffer;
-		const hashBuf = await (g.crypto.subtle as any).digest('SHA-256', dataBuf);
-		const hash = new Uint8Array(hashBuf);
-		return Array.from(hash).map(b => b.toString(16).padStart(2, '0')).join('');
-	}
-
-	// Node fallback
-	try {
-		// eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
-		const crypto = require('node:crypto');
-		return crypto.createHash('sha256').update(Buffer.from(data)).digest('hex');
-	} catch (e) {
-		throw new Error('No crypto available to compute SHA-256');
-	}
+	const dataBuf = new Uint8Array(data).slice().buffer;
+	const hashBuf = await (g.crypto.subtle as any).digest('SHA-256', dataBuf);
+	const hash = new Uint8Array(hashBuf);
+	return Array.from(hash).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 export async function computeHmacBase64(data: Uint8Array, base64Key: string): Promise<string> {
 	const keyBytes = decodeBase64(base64Key);
 	const g = getGlobal();
-	if (g.crypto && g.crypto.subtle && g.crypto.subtle.importKey) {
-		const alg = { name: 'HMAC', hash: { name: 'SHA-256' } } as const;
-		const keyBuf = keyBytes.slice().buffer;
-		const dataBuf = new Uint8Array(data).slice().buffer;
-		const key = await (g.crypto.subtle as any).importKey('raw', keyBuf, alg, false, ['sign']);
-		const sig = await (g.crypto.subtle as any).sign(alg.name, key, dataBuf);
-		const sigBytes = new Uint8Array(sig);
-		// base64 encode
-		let b = '';
-		const len = sigBytes.length;
-		for (let i = 0; i < len; i += 3) {
-			const a = sigBytes[i];
-			const bb = sigBytes[i + 1] || 0;
-			const c = sigBytes[i + 2] || 0;
-			const n = (a << 16) | (bb << 8) | c;
-			b += String.fromCharCode((n >> 18) & 0x3f);
-			b += String.fromCharCode((n >> 12) & 0x3f);
-			b += String.fromCharCode((n >> 6) & 0x3f);
-			b += String.fromCharCode(n & 0x3f);
-		}
-		// Use Buffer when available, otherwise use the module's encodeBase64
-		try {
-			// eslint-disable-next-line @typescript-eslint/no-var-requires
-			const Buffer = g.Buffer || (require && require('buffer').Buffer);
-			return Buffer.from(sigBytes).toString('base64');
-		} catch (e) {
-			return encodeBase64(sigBytes);
-		}
-	}
-
-	// Node fallback
-	try {
-		// eslint-disable-next-line @typescript-eslint/no-var-requires
-		const crypto = require('node:crypto');
-		const key = Buffer.from(base64Key, 'base64');
-		return crypto.createHmac('sha256', key).update(Buffer.from(data)).digest('base64');
-	} catch (e) {
-		throw new Error('No crypto available to compute HMAC');
-	}
+	const alg = { name: 'HMAC', hash: { name: 'SHA-256' } } as const;
+	const keyBuf = keyBytes.slice().buffer;
+	const dataBuf = new Uint8Array(data).slice().buffer;
+	const key = await (g.crypto.subtle as any).importKey('raw', keyBuf, alg, false, ['sign']);
+	const sig = await (g.crypto.subtle as any).sign(alg.name, key, dataBuf);
+	const sigBytes = new Uint8Array(sig);
+	return encodeBase64(sigBytes);
 }
 
 export async function verifyRsaSignatureBase64(
@@ -273,44 +204,21 @@ export async function verifyRsaSignatureBase64(
 	pubKeyPem: string,
 	algo: 'pkcs1' | 'pss' = 'pss',
 ): Promise<boolean> {
-	// Node path
-	try {
-		// eslint-disable-next-line @typescript-eslint/no-var-requires
-		const crypto = require('node:crypto');
-		const sigBuf = Buffer.from(sigBase64, 'base64');
-		if (algo === 'pss') {
-			return crypto.verify('sha256', Buffer.from(data), {
-				key: pubKeyPem,
-				padding: crypto.constants.RSA_PKCS1_PSS_PADDING,
-				saltLength: crypto.constants.RSA_PSS_SALTLEN_DIGEST,
-			}, sigBuf);
-		}
-
-		const verifier = crypto.createVerify('RSA-SHA256');
-		verifier.update(data);
-		verifier.end();
-		return verifier.verify(pubKeyPem, sigBuf);
-	} catch (e) {
-		// WebCrypto path
+	// eslint-disable-next-line @typescript-eslint/no-var-requires
+	const crypto = require('node:crypto');
+	const sigBuf = Buffer.from(sigBase64, 'base64');
+	if (algo === 'pss') {
+		return crypto.verify('sha256', Buffer.from(data), {
+			key: pubKeyPem,
+			padding: crypto.constants.RSA_PKCS1_PSS_PADDING,
+			saltLength: crypto.constants.RSA_PSS_SALTLEN_DIGEST,
+		}, sigBuf);
 	}
 
-	const g = getGlobal() as any;
-	if (g.crypto && g.crypto.subtle && (g.crypto.subtle as any).importKey) {
-		// convert PEM to raw SPKI
-		const pem = pubKeyPem.replace(/-----BEGIN PUBLIC KEY-----/, '').replace(/-----END PUBLIC KEY-----/, '').replace(/\s+/g, '');
-		const der = decodeBase64(pem);
-		const sig = decodeBase64(sigBase64);
-		if (algo === 'pss') {
-			const key = await (g.crypto.subtle as any).importKey('spki', der.buffer, { name: 'RSA-PSS', hash: { name: 'SHA-256' } }, false, ['verify']);
-			// saltLength: use digest length (32 bytes for SHA-256)
-			return await (g.crypto.subtle as any).verify({ name: 'RSA-PSS', saltLength: 32 }, key, sig.buffer, data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength));
-		}
-
-		const key = await (g.crypto.subtle as any).importKey('spki', der.buffer, { name: 'RSASSA-PKCS1-v1_5', hash: { name: 'SHA-256' } }, false, ['verify']);
-		return await (g.crypto.subtle as any).verify('RSASSA-PKCS1-v1_5', key, sig.buffer, data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength));
-	}
-
-	throw new Error('No crypto available for signature verification');
+	const verifier = crypto.createVerify('RSA-SHA256');
+	verifier.update(data);
+	verifier.end();
+	return verifier.verify(pubKeyPem, sigBuf);
 }
 
 /**
@@ -340,11 +248,6 @@ export function canonicalizeWasmForSigning(obj: any): Uint8Array {
  * compatible with Node.js 18+, modern browsers, and Cloudflare Workers.
  */
 export function getCrypto(): any {
-	if (typeof crypto !== "undefined") return crypto;
 	if (typeof globalThis !== "undefined" && (globalThis as any).crypto) return (globalThis as any).crypto;
-	try {
-		return require("node:crypto").webcrypto;
-	} catch {
-		throw new Error("Cryptographically secure random number generator (Web Crypto API) is required.");
-	}
+	return typeof crypto !== "undefined" ? crypto : null;
 }
