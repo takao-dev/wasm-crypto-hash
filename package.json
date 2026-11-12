@@ -33,9 +33,9 @@
     "build": "tsc -p tsconfig.json && node -e \"require('node:fs').cpSync('wasm', 'dist/wasm', {recursive: true})\"",
     "build:all": "node ./scripts/build.mjs",
     "lint": "npx @biomejs/biome check lib test",
-    "test": "node --test test/new-protocols.test.mjs test/security-suite.test.mjs test/security-regressions.test.mjs",
+    "test": "node --test test/new-protocols.test.mjs test/security-suite.test.mjs test/security-regressions.test.mjs test/all-algorithms.test.mjs",
     "bench:prod": "node ./examples/bench/prod_bench.js",
-    "test:coverage": "node -e \"require('node:fs').mkdirSync('coverage', {recursive: true})\" && node --test --experimental-test-coverage --test-reporter=spec --test-reporter=lcov --test-reporter=junit --test-reporter-destination=stdout --test-reporter-destination=coverage/lcov.info --test-reporter-destination=coverage/junit.xml test/new-protocols.test.mjs test/security-suite.test.mjs test/security-regressions.test.mjs",
+    "test:coverage": "node -e \"require('node:fs').mkdirSync('coverage', {recursive: true})\" && node --test --experimental-test-coverage --test-reporter=spec --test-reporter=lcov --test-reporter=junit --test-reporter-destination=stdout --test-reporter-destination=coverage/lcov.info --test-reporter-destination=coverage/junit.xml test/new-protocols.test.mjs test/security-suite.test.mjs test/security-regressions.test.mjs test/all-algorithms.test.mjs",
     "pretest": "npm run build",
     "pretest:coverage": "npm run build",
     "prepack": "npm run build"
