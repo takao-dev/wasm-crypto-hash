@@ -506,6 +506,17 @@ test('Poseidon 0x hex string and environment fallbacks', async () => {
     Object.defineProperty(globalThis.crypto, 'getRandomValues', { value: origGetRandomValues, configurable: true });
   }
 
+  // getCrypto fallback to node:crypto.webcrypto when globalThis.crypto is undefined
+  const origCryptoObj = globalThis.crypto;
+  try {
+    Object.defineProperty(globalThis, 'crypto', { value: undefined, configurable: true });
+    const { getCrypto } = await import('../dist/lib/util.js');
+    const c = getCrypto();
+    assert.ok(c && c.subtle);
+  } finally {
+    Object.defineProperty(globalThis, 'crypto', { value: origCryptoObj, configurable: true });
+  }
+
   // WebAssembly missing error path
   const origWA = globalThis.WebAssembly;
   try {

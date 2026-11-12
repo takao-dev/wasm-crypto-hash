@@ -1,7 +1,3 @@
-function getGlobal() {
-	return typeof globalThis !== "undefined" ? globalThis : global;
-}
-
 const textEncoder = new TextEncoder();
 
 export type ITypedArray = Uint8Array | Uint16Array | Uint32Array;
@@ -179,21 +175,21 @@ export function timingSafeEqualString(a: string, b: string): boolean {
 }
 
 export async function computeSHA256Hex(data: Uint8Array): Promise<string> {
-	const g = getGlobal();
+	const c = getCrypto();
 	const dataBuf = new Uint8Array(data).slice().buffer;
-	const hashBuf = await (g.crypto.subtle as any).digest('SHA-256', dataBuf);
+	const hashBuf = await c.subtle.digest('SHA-256', dataBuf);
 	const hash = new Uint8Array(hashBuf);
-	return Array.from(hash).map(b => b.toString(16).padStart(2, '0')).join('');
+	return Array.from(hash).map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
 export async function computeHmacBase64(data: Uint8Array, base64Key: string): Promise<string> {
 	const keyBytes = decodeBase64(base64Key);
-	const g = getGlobal();
+	const c = getCrypto();
 	const alg = { name: 'HMAC', hash: { name: 'SHA-256' } } as const;
 	const keyBuf = keyBytes.slice().buffer;
 	const dataBuf = new Uint8Array(data).slice().buffer;
-	const key = await (g.crypto.subtle as any).importKey('raw', keyBuf, alg, false, ['sign']);
-	const sig = await (g.crypto.subtle as any).sign(alg.name, key, dataBuf);
+	const key = await c.subtle.importKey('raw', keyBuf, alg, false, ['sign']);
+	const sig = await c.subtle.sign(alg.name, key, dataBuf);
 	const sigBytes = new Uint8Array(sig);
 	return encodeBase64(sigBytes);
 }
@@ -248,6 +244,13 @@ export function canonicalizeWasmForSigning(obj: any): Uint8Array {
  * compatible with Node.js 18+, modern browsers, and Cloudflare Workers.
  */
 export function getCrypto(): any {
-	if (typeof globalThis !== "undefined" && (globalThis as any).crypto) return (globalThis as any).crypto;
-	return typeof crypto !== "undefined" ? crypto : null;
+	if (typeof globalThis !== "undefined" && (globalThis as any).crypto?.subtle) return (globalThis as any).crypto;
+	if (typeof crypto !== "undefined" && (crypto as any)?.subtle) return crypto;
+	try {
+		return require("node:crypto").webcrypto;
+	/* node:coverage disable */
+	} catch {
+		return null;
+	}
+	/* node:coverage enable */
 }
