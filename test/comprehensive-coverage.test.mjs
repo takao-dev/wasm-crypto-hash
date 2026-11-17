@@ -28,6 +28,7 @@ import {
   keccak, createKeccak,
   sha3, createSHA3,
   shake256, createSHAKE256,
+  kmac256,
   createHMAC,
   entropyToMnemonic, generateMnemonic,
   aesKeyWrap, aesKeyUnwrap,
@@ -411,6 +412,13 @@ test('Algorithm parameter validation error branches', async () => {
   const b3Hasher = await createBLAKE3(256, b3Key);
   b3Hasher.init().update('test');
   assert.equal(b3Hasher.digest('hex'), b3Keyed);
+
+  // KMAC256, scrypt safety limit, and SHAKE256 validation branches
+  await assert.rejects(() => kmac256('key', 'data', 7), /byte-aligned/);
+  await assert.rejects(() => scrypt({ password: 'p', salt: 's', costFactor: 65536, blockSize: 8, parallelism: 1, hashLength: 32 }), /64 MiB safety limit/);
+  await assert.rejects(() => shake256('data', 7), /byte-aligned/);
+  const shakeHasher = await createSHAKE256(256);
+  assert.throws(() => shakeHasher.load(new Uint8Array(10)), /Incompatible or malformed SHAKE256 state/);
 });
 
 test('Argon2 partialBytesNeeded, default outputType, and unsupported version', async () => {

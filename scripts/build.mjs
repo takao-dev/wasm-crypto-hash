@@ -25,7 +25,6 @@ function resolveToolBin(packageName, binaryPath) {
   return null;
 }
 
-const rollupBin = resolveToolBin('rollup', ['rollup', 'dist', 'bin', 'rollup']);
 const tscBin = resolveToolBin('typescript', ['typescript', 'bin', 'tsc']);
 
 function run(command, args, options = {}) {
@@ -85,24 +84,9 @@ if (isClangOnly) {
 fs.rmSync(distDir, { recursive: true, force: true });
 run(process.execPath, ['scripts/make_json.js']);
 
-if (rollupBin && fs.existsSync(rollupBin)) {
-  run(process.execPath, [rollupBin, '-c']);
-} else {
-  throw new Error('Unable to locate rollup binary in local or sibling node_modules');
-}
-
 if (tscBin && fs.existsSync(tscBin)) {
-  run(process.execPath, [
-    tscBin,
-    './lib/index',
-    '--outDir',
-    './dist',
-    '--downlevelIteration',
-    '--emitDeclarationOnly',
-    '--declaration',
-    '--resolveJsonModule',
-    '--allowSyntheticDefaultImports',
-  ]);
+  run(process.execPath, [tscBin, '-p', 'tsconfig.json']);
+  fs.cpSync(path.join(root, 'wasm'), path.join(distDir, 'wasm'), { recursive: true });
 } else {
   throw new Error('Unable to locate tsc binary in local or sibling node_modules');
 }

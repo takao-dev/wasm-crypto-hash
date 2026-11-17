@@ -1,4 +1,4 @@
-const MASK64 = 0xffff_ffff_ffff_ffffn;
+const MASK64 = 0xffffffffffffffffn;
 const RHO = [0, 1, 62, 28, 27, 36, 44, 6, 55, 20, 3, 10, 43, 25, 39, 41, 45, 15, 21, 8, 18, 2, 61, 56, 14];
 const ROUND_CONSTANTS = [
 	0x0000000000000001n, 0x0000000000008082n, 0x800000000000808an, 0x8000000080008000n,
