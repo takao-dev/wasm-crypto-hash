@@ -1,8 +1,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
-const root = process.cwd();
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const packageManifest = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+if (packageManifest.name !== 'wasm-crypto-hash') throw new Error('Refusing to build outside the wasm-crypto-hash package root');
+const distDir = path.resolve(root, 'dist');
+if (path.dirname(distDir) !== root) throw new Error('Refusing to clean an unexpected build directory');
 const isClangOnly = process.argv.includes('--clang-only');
 const dockerCmd = process.platform === 'win32' ? 'docker.exe' : 'docker';
 const candidateNodeModules = [
@@ -25,6 +30,7 @@ const tscBin = resolveToolBin('typescript', ['typescript', 'bin', 'tsc']);
 
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
+    cwd: root,
     stdio: 'inherit',
     ...options,
   });
@@ -37,6 +43,7 @@ function run(command, args, options = {}) {
 
 function ensureClangImage() {
   const inspect = spawnSync(dockerCmd, ['images', '-q', 'clang:wasm-crypto-hash'], {
+    cwd: root,
     encoding: 'utf8',
   });
 
@@ -53,7 +60,6 @@ function toDockerVolumePath(filePath) {
   return filePath.replace(/\\/g, '/');
 }
 
-fs.rmSync(path.join(root, 'dist'), { recursive: true, force: true });
 fs.mkdirSync(path.join(root, 'wasm'), { recursive: true });
 
 ensureClangImage();
@@ -76,6 +82,7 @@ if (isClangOnly) {
   process.exit(0);
 }
 
+fs.rmSync(distDir, { recursive: true, force: true });
 run(process.execPath, ['scripts/make_json.js']);
 
 if (rollupBin && fs.existsSync(rollupBin)) {

@@ -5,6 +5,7 @@
 - ハッシュAPIの基本対応環境とは別に、**ML-KEM-768／ML-DSA-65にはネイティブWeb Crypto対応が必要**です（例：Node.js 26）。未対応のNode・ブラウザー・Workersではエラーとなり、古典暗号へ代替しません。ネイティブAPIの使用は、このパッケージの認証・第三者監査を意味しません。
 - ハイブリッド方式は実際のX25519とML-KEM-768の共有秘密を、暗号文のハッシュを文脈に含めたHKDF-SHA256で結合する独自の版付き形式です。TLS/IETF形式ではありません。ML-DSA公開鍵はDER SPKI、秘密鍵はDER PKCS#8、署名は3309バイトです。以前の古典暗号だけの鍵・暗号文とは互換性がないため、新しい鍵を生成して明示的に移行してください。
 - AES-KWはネイティブWeb Cryptoを使用し、認証失敗・未対応時に拒否します。旧フォールバックの出力は鍵の平文を含む可能性があります。信頼できる元の鍵から再ラップし、影響する鍵はローテーションしてください。不明な旧データを自動復旧しません。
+- `poseidon` と `balloon` のエクスポートはAPI互換性のため残していますが、実装が規格に適合しないため呼び出すとエラーになります。使用せず、別途レビュー済みの実装へ移行してください。
 - BIP39の既定値は公式英語2048語です。独自辞書も重複のない2048語のNFKD形式が必要です。既存フレーズは引き続きmnemonicToSeedへの入力に使用できます。復旧目的でフレーズを再生成せず、旧サンプル辞書からの移行は鍵・ウォレットの移行として実施してください。
 - リモートWASMには、呼び出し側が信頼するSHA-256・HMAC・署名または公開鍵が必要です。JSON形式もデコード後のバイト列に同じ検証を適用します。公開鍵を設定した場合は署名必須、検証に必要な鍵がない場合も拒否します。分離署名は生バイト、コンテナー署名は正規化メタデータを対象とします。埋め込みモジュールもキャッシュ参照前に検証し、キャッシュは内容のハッシュで識別します。
 - 検証鍵やハッシュは配布メタデータと独立した信頼経路で設定してください。同梱ハッシュだけでは、コードとハッシュを両方置換する配布元への攻撃を防げません。KMS署名は配布者による設定が必要で、全成果物への既定署名を保証しません。
@@ -16,11 +17,11 @@
 [![CodeQL](https://github.com/takao-dev/wasm-crypto-hash/actions/workflows/codeql.yml/badge.svg)](https://github.com/takao-dev/wasm-crypto-hash/actions/workflows/codeql.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-> **超高速 WebAssembly 暗号スイート**: 31種類以上の暗号ハッシュ、AEAD共通鍵暗号、耐量子暗号（PQC）、2要素認証（2FA/TOTP）、BIP-39ニーモニック、閾値秘密分散を網羅。ブラウザ、Node.js、および Cloudflare Workers（workerd）に完全対応。
+> **WebAssembly 暗号ユーティリティ**: 多数のハッシュ、AEAD共通鍵暗号、耐量子暗号（PQC）、2要素認証（2FA/TOTP）、BIP-39ニーモニック、閾値秘密分散を提供します。ブラウザ、Node.js、および Cloudflare Workers（workerd）向けです。
 
 **wasm-crypto-hash** は、ブラウザ、Node.js、および Cloudflare Workers（Edge）向けに高度に最適化された WebAssembly (WASM) ベースの高速暗号ハッシュ・チェックサム・次世代暗号プロトコルユーティリティパッケージです。
 
-ハンドチューニングされた WebAssembly バイナリと純粋な TypeScript により、業界最高水準の計算速度とエンタープライズ級の改ざん耐性を提供します。
+WebAssembly バイナリと TypeScript を組み合わせた暗号ユーティリティです。WASM整合性検証や署名検証は任意設定であり、既定で全成果物が署名済みであること、または第三者監査・認証済みであることを意味しません。性能は実行環境により異なります。
 
 ---
 
@@ -39,9 +40,9 @@
 4. **定時間比較によるタイミング攻撃（Side-Channel Attack）の排除**:
    - MAC照合には比較用ヘルパーを使用します。JavaScript実行環境全体の定時間性やタイミング攻撃への完全耐性を保証するものではありません。
 5. **次世代暗号プロトコルスイートの拡充**:
-   - 古典ハッシュにとどまらず、**NIST FIPS 203 耐量子暗号（ML-KEM-768 ハイブリッド）**、**RFC 8439 ChaCha20-Poly1305 AEAD**、**NIST SP 800-185 KMAC256**、**FIPS 202 SHAKE256**、**ゼロ知識証明向け Poseidon ハッシュ**、**Stanford Balloon Hashing**、**シャミアの秘密分散法（SSS）** を標準搭載。
-6. **厳格なメモリリーク検査（Leak-Free）＆ 脆弱性ゼロ**:
-   - `--expose-gc` による GC 強制実行とヒープモニタリングテストを実施。大容量検証付き読み込み時も線形メモリを安全に管理し、npm audit 脆弱性ゼロ（0 vulnerabilities）を維持。
+   - **NIST FIPS 203 ML-KEM-768 ハイブリッド鍵カプセル化**、**RFC 8439 ChaCha20-Poly1305 AEAD**、**NIST SP 800-185 KMAC256**、**FIPS 202 SHAKE256**、**シャミアの秘密分散法（SSS）** を含みます。`poseidon` と `balloon` は現在呼び出すとエラーになります。上記の互換性注記を参照してください。
+6. **セキュリティ回帰テスト**:
+   - 暗号処理と入力検証に関する一部の回帰を自動テストします。テストや依存監査の成功は、脆弱性が存在しないことを保証しません。
 
 ---
 
@@ -52,7 +53,6 @@
 | **Adler-32** | チェックサム | 2 kB | RFC 1950 (WASM) |
 | **AES-KW (Key Wrap)** | 鍵ラッピング | 1 kB | RFC 3394 / NIST SP 800-38F |
 | **Argon2: 2d, 2i, 2id (v1.3)** | パスワードKDF | 6 kB | RFC 9106（WASM） |
-| **Balloon Hashing** | パスワードKDF | 1 kB | スタンフォード大学設計（Boneh et al.） |
 | **bcrypt** | パスワードKDF | 9 kB | OpenBSD Blowfish 暗号 (WASM) |
 | **BIP-39 (Mnemonic & Seed)** | ニーモニックKDF | 2 kB | Bitcoin / Web3 標準決定性シード生成 |
 | **BLAKE2b / BLAKE2s** | 暗号学的ハッシュ | 5 kB / 5 kB | RFC 7693 (WASM) |
@@ -67,7 +67,6 @@
 | **ML-KEM-768 + X25519 (Hybrid)** | 耐量子鍵共有 (PQC) | 実行環境依存 | ネイティブ ML-KEM-768 + X25519、独自HKDF形式 |
 | **MurmurHash3 (32 / 128)** | 非暗号超高速ハッシュ | 1 kB | Austin Appleby ブルームフィルター標準 |
 | **PBKDF2** | 鍵導出関数 | 1 kB | RFC 2898 |
-| **Poseidon** | ゼロ知識ハッシュ | 1 kB | BN254 楕円曲線 ZK-SNARK 最適化 |
 | **RIPEMD-160** | レガシー | 4 kB | ISO/IEC 10118-3 (WASM) |
 | **scrypt** | パスワードKDF | 4 kB | RFC 7914 (WASM) |
 | **SHA-1** | レガシー | 4 kB | RFC 3174 (WASM) |
@@ -178,6 +177,17 @@ export default {
   },
 };
 ```
+
+---
+
+## 関連エッジセキュリティパッケージ群
+
+- [edge-rate-limiter](https://github.com/takao-dev/edge-rate-limiter): 外部依存ゼロの固定/スライド窓型レートリミッター（ソルト付き匿名化対応）
+- [edge-secure-token](https://github.com/takao-dev/edge-secure-token): タイミング攻撃耐性を持つ WebCrypto ベースの JWT & クレーム暗号化スイート
+- [edge-session-crypto](https://github.com/takao-dev/edge-session-crypto): AES-GCM と鍵ローテーションを備えたステートレス暗号化クッキーセッション管理
+- [zero-pii-redactor](https://github.com/takao-dev/zero-pii-redactor): ログ・AIプロンプト向けの超高速・ReDoSフリー PII マスキング＆匿名化ツール
+- [webcrypto-secure-storage](https://github.com/takao-dev/webcrypto-secure-storage): AES-GCM & HMAC による改ざん検知機能付きセキュアKVストレージ
+- [edge-audit-crypto](https://github.com/takao-dev/edge-audit-crypto): 暗号論的ハッシュチェーンによる改ざん耐性監査ログ記録
 
 ---
 

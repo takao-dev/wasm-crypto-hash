@@ -458,11 +458,11 @@ test('PBKDF2 derivations and validation errors', async () => {
   // Validation errors
   await assert.rejects(
     () => pbkdf2({ password: 'p', salt, iterations: 0, hashLength: 16, hashFunction: createSHA256() }),
-    /Iterations should be a positive number/i
+    /Iterations should be an integer from/i
   );
   await assert.rejects(
     () => pbkdf2({ password: 'p', salt, iterations: 10, hashLength: 0, hashFunction: createSHA256() }),
-    /Hash length should be a positive number/i
+    /Hash length should be an integer from/i
   );
 });
 
@@ -477,6 +477,6 @@ test('BLAKE invalid bits parameter errors', async () => {
   );
   await assert.rejects(
     () => blake3('data', 7),
-    /Invalid variant/i
+    /byte-aligned/i
   );
 });

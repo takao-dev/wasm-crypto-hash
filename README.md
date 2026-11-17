@@ -5,12 +5,14 @@
 - Hash APIs still support the declared base runtimes. **ML-KEM-768 and ML-DSA-65 additionally require native Web Crypto support** (for example Node.js 26). Unsupported Node/browser/Workers runtimes reject; no classical substitution occurs. Native algorithm support does not imply certification or independent review of this package.
 - Hybrid keys/ciphertexts use versioned package-specific envelopes combining actual X25519 and ML-KEM-768 secrets through HKDF-SHA256 with a hashed ciphertext transcript. They are not TLS/IETF wire formats. ML-DSA public keys are DER SPKI, private keys DER PKCS#8, and signatures 3309 bytes. Previous classical-only keys/ciphertexts are incompatible: generate new keys and migrate deliberately; do not relabel old material.
 - AES-KW requires native Web Crypto and rejects authentication/capability failures. Prior fallback-produced records may expose plaintext keys. Re-wrap only known-trusted original keys and rotate affected keys; untrusted old records cannot be safely auto-recovered.
+- The `poseidon` and `balloon` exports are retained for API compatibility but reject calls because their implementations are not conformant. Do not use them; migrate to a separately reviewed implementation.
 - BIP39 defaults to the complete official English 2048-word list. Custom dictionaries must have exactly 2048 unique NFKD words. Existing recovery phrases remain inputs to mnemonicToSeed; do not regenerate a phrase to recover existing data. Replace old sample-list phrases through an explicit key/wallet migration.
 - The remote WASM loader requires a caller-trusted SHA-256 pin, HMAC/signature, or public key. Pins always cover decoded WASM bytes, including JSON containers. A configured public key requires a signature; requested verification without its key rejects. Detached signatures cover raw bytes; container signatures cover canonical metadata. Embedded module validation runs before cache lookup and cache identity is the content digest.
 - Signature keys/pins must come from a trusted channel independent of downloaded metadata. Packaged metadata hashes detect corruption, not a malicious publisher replacing both code and metadata. Signing/KMS configuration is optional and must be configured by the distributor; this repository's artifacts are not all signed by default.
 
 
 [![npm package](https://img.shields.io/npm/v/wasm-crypto-hash.svg)](https://www.npmjs.com/package/wasm-crypto-hash)
+[![npm downloads](https://img.shields.io/npm/dw/wasm-crypto-hash.svg)](https://www.npmjs.com/package/wasm-crypto-hash)
 [![CI](https://github.com/takao-dev/wasm-crypto-hash/actions/workflows/ci.yml/badge.svg)](https://github.com/takao-dev/wasm-crypto-hash/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/takao-dev/wasm-crypto-hash/branch/main/graph/badge.svg)](https://codecov.io/gh/takao-dev/wasm-crypto-hash)
 [![CodeQL](https://github.com/takao-dev/wasm-crypto-hash/actions/workflows/codeql.yml/badge.svg)](https://github.com/takao-dev/wasm-crypto-hash/actions/workflows/codeql.yml)
@@ -27,7 +29,6 @@
 | Adler-32                                       | Checksum | 2 kB                  | RFC 1950 (WASM)        |
 | AES-KW (Key Wrap)                              | Key Wrap | 1 kB                  | RFC 3394 / NIST SP 800-38F |
 | Argon2: Argon2d, Argon2i, Argon2id (v1.3)      | KDF / Pwd| 6 kB                  | RFC 9106 (WASM)        |
-| Balloon Hashing                                | KDF / Pwd| 1 kB                  | Stanford memory-hard KDF (Boneh et al.) |
 | bcrypt                                         | KDF / Pwd| 9 kB                  | OpenBSD Blowfish cipher (WASM) |
 | BIP-39 (Mnemonic & Seed)                       | Seed KDF | 2 kB                  | Bitcoin / Web3 standard |
 | BLAKE2b / BLAKE2s                              | Hash     | 5 kB / 5 kB           | RFC 7693 (WASM)        |
@@ -42,7 +43,6 @@
 | ML-KEM-768 + X25519 (Hybrid)                   | PQC KEM  | native runtime                  | Native ML-KEM-768 + X25519; package-specific HKDF envelope |
 | MurmurHash3 (32-bit / 128-bit)                 | Fast Hash| 1 kB                  | Austin Appleby Bloom filter suite |
 | PBKDF2                                         | KDF      | 1 kB                  | RFC 2898               |
-| Poseidon                                       | ZK Hash  | 1 kB                  | BN254 algebraic ZK-SNARK hash |
 | RIPEMD-160                                     | Legacy   | 4 kB                  | ISO/IEC 10118-3 (WASM) |
 | scrypt                                         | KDF / Pwd| 4 kB                  | RFC 7914 (WASM)        |
 | SHA-1                                          | Legacy   | 4 kB                  | RFC 3174 (WASM)        |
@@ -69,11 +69,11 @@
 3. **Remote WASM Verification Loader (`remoteWasmLoader.ts`)**:
    - Built-in support for loading remote WASM modules from CDNs (unpkg, jsdelivr) or cloud storage (Cloudflare R2, AWS S3) with on-the-fly digest and cryptographic signature verification.
 4. **Verification comparison behavior**:
-   - MAC comparison helpers utilize `timingSafeEqualString` bitwise constant-time comparisons, mathematically neutralizing side-channel timing attacks.
+   - MAC comparison helpers use `timingSafeEqualString` to reduce byte-by-byte comparison timing differences. JavaScript runtimes do not guarantee end-to-end constant-time execution.
 5. **Next-Generation Cryptographic Protocol Suite**:
-   - Extends far beyond classical hashes to include **NIST FIPS 203 Post-Quantum Cryptography (ML-KEM-768 Hybrid)**, **RFC 8439 ChaCha20-Poly1305 AEAD**, **NIST SP 800-185 KMAC**, **SHAKE256 XOF**, **Poseidon ZK-SNARK Hash**, **Balloon Hashing**, and **Shamir's Secret Sharing**.
-6. **Leak-Free Memory Safety & Zero Audit Vulnerabilities**:
-   - Verified with `--expose-gc` heap monitoring to prevent WebAssembly linear memory leaks during high-throughput streaming. Maintained with 0 npm audit security vulnerabilities.
+   - Includes **NIST FIPS 203 ML-KEM-768 hybrid key encapsulation**, **RFC 8439 ChaCha20-Poly1305 AEAD**, **NIST SP 800-185 KMAC**, **SHAKE256 XOF**, and **Shamir's Secret Sharing**. The `poseidon` and `balloon` exports currently reject calls; see the compatibility note above.
+6. **Security regression tests**:
+   - Automated tests cover selected cryptographic and input-validation regressions. Passing tests and dependency audits do not establish the absence of vulnerabilities.
 
 # Features
 
@@ -751,3 +751,16 @@ murmurhash3(data: IDataType, seed?: number): Promise<string>
 - WebAssembly SIMD hardware acceleration (expecting additional 20-30% performance speedup)
 - Pure WASM memory allocator improvements for ultra-high throughput pipelines
 - Extended post-quantum signature schemes and hardware KMS adapters
+
+---
+
+## Related Edge Security Packages
+
+Complementary zero-dependency, high-performance security modules for Edge runtimes, Cloudflare Workers, and modern Node.js:
+
+- [edge-rate-limiter](https://github.com/takao-dev/edge-rate-limiter): Zero-dependency sliding-window & token-bucket rate limiter with Zero-PII keyed hashing.
+- [edge-secure-token](https://github.com/takao-dev/edge-secure-token): Zero-dependency, timing-safe WebCrypto JWT suite with field-level claims encryption.
+- [edge-session-crypto](https://github.com/takao-dev/edge-session-crypto): Stateless encrypted cookie session manager with AES-GCM and key rotation.
+- [zero-pii-redactor](https://github.com/takao-dev/zero-pii-redactor): High-speed, ReDoS-free PII redactor, tokenizer, and pseudonymizer for logs and AI prompts.
+- [webcrypto-secure-storage](https://github.com/takao-dev/webcrypto-secure-storage): Tamper-evident authenticated key-value storage with AES-GCM & HMAC.
+- [edge-audit-crypto](https://github.com/takao-dev/edge-audit-crypto): Tamper-evident cryptographic append-only audit trail logging.

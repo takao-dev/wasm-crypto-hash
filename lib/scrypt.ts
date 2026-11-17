@@ -54,7 +54,7 @@ async function scryptInternal(
 
 	// last block is for storing the temporary vectors
 	const VSize = 128 * blockSize * costFactor;
-	const XYSize = 256 * blockSize;
+	const XYSize = 256 * blockSize + 64;
 	scryptInterface.setMemorySize(blockData.length + VSize + XYSize);
 	scryptInterface.writeMemory(blockData, 0);
 
@@ -84,6 +84,7 @@ async function scryptInternal(
 }
 
 const isPowerOfTwo = (v: number): boolean => v && !(v & (v - 1));
+const MAX_SCRYPT_MEMORY_BYTES = 64 * 1024 * 1024;
 
 const validateOptions = (options: ScryptOptions) => {
 	if (!options || typeof options !== "object") {
@@ -97,6 +98,7 @@ const validateOptions = (options: ScryptOptions) => {
 	if (
 		!Number.isInteger(options.costFactor) ||
 		options.costFactor < 2 ||
+		options.costFactor > 2 ** 30 ||
 		!isPowerOfTwo(options.costFactor)
 	) {
 		throw new Error("Cost factor should be a power of 2, greater than 1");
@@ -108,6 +110,14 @@ const validateOptions = (options: ScryptOptions) => {
 
 	if (!Number.isInteger(options.hashLength) || options.hashLength < 1) {
 		throw new Error("Hash length should be a positive number.");
+	}
+	if (options.hashLength > 1_048_576) throw new Error('Hash length must not exceed 1048576 bytes');
+	const blockBytes = 128 * options.blockSize * options.parallelism;
+	const vBytes = 128 * options.blockSize * options.costFactor;
+	const xyBytes = 256 * options.blockSize + 64;
+	const totalBytes = blockBytes + vBytes + xyBytes;
+	if (![blockBytes, vBytes, xyBytes, totalBytes].every(Number.isSafeInteger) || totalBytes > MAX_SCRYPT_MEMORY_BYTES) {
+		throw new Error('scrypt memory requirement exceeds the 64 MiB safety limit');
 	}
 
 	if (options.outputType === undefined) {

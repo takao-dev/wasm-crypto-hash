@@ -15,6 +15,29 @@ const nativePqc = await webcrypto.subtle.generateKey('ML-DSA-65',true,['sign','v
 const hex = s => new Uint8Array(Buffer.from(s,'hex'));
 const view = bytes => { const out = new Uint8Array(bytes.length+8); out.set(bytes,3); return out.subarray(3,3+bytes.length); };
 
+test('SHAKE256 matches Node crypto across input and output block boundaries', async()=>{
+ for (const inputLength of [0,1,135,136,137,272]) {
+  const input=Buffer.alloc(inputLength,0xa5);
+  for (const outputLength of [1,32,137,300]) {
+   const expected=createHash('shake256',{outputLength}).update(input).digest('hex');
+   assert.equal(await api.shake256(input,outputLength*8),expected,`${inputLength} input bytes / ${outputLength} output bytes`);
+   const hasher=await api.createSHAKE256(outputLength*8);
+   hasher.update(input.subarray(0,Math.floor(input.length/2)));
+   const saved=hasher.save();
+   const resumed=await api.createSHAKE256(outputLength*8);
+   resumed.load(saved).update(input.subarray(Math.floor(input.length/2)));
+   assert.equal(resumed.digest('hex'),expected);
+  }
+ }
+});
+
+test('KMAC256 matches the SP 800-185 sample vector and includes customization', async()=>{
+ const key=Uint8Array.from({length:32},(_,i)=>0x40+i);
+ const data=Uint8Array.from([0,1,2,3]);
+ assert.equal(await api.kmac256(key,data,512,''),'2ebd1622de2de44174e3477206060d7f64489a639b7545649132317609fa214f4c8ac90630fb4c757fba074b15186fe452ae71b6a1e443bf54059e090c11ae20');
+ assert.notEqual(await api.kmac256(key,data,512,'custom'),await api.kmac256(key,data,512,''));
+});
+
 test('AES-KW RFC3394 vector, arbitrary key sizes and offset views', async()=>{
  const kek=hex('000102030405060708090a0b0c0d0e0f'), key=hex('00112233445566778899aabbccddeeff');
  const expected=hex('1fa68b0a8112b447aef34bd8fb5a7b829d3e862371d2cfe5');

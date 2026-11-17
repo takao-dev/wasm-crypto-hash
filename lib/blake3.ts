@@ -12,8 +12,8 @@ const mutex = new Mutex();
 let wasmCache: IWASMInterface = null;
 
 function validateBits(bits: number) {
-	if (!Number.isInteger(bits) || bits < 8 || bits % 8 !== 0) {
-		return new Error("Invalid variant! Valid values: 8, 16, ...");
+	if (!Number.isSafeInteger(bits) || bits < 8 || bits % 8 !== 0 || bits > 16 * 1024 * 8) {
+		return new Error("BLAKE3 output must be byte-aligned from 8 to 131072 bits (16384 bytes)");
 	}
 	return null;
 }

@@ -3,6 +3,7 @@ import test from 'node:test';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
+const { poseidonHash, balloonHash } = require('../dist/lib/index.js');
 
 // 1. SHAKE256 (FIPS 202)
 test('SHAKE256 calculates accurate extendable-output hash matching test vectors', async () => {
@@ -102,14 +103,10 @@ test('Shamir Secret Sharing (3 of 5) accurately splits and reconstructs secret',
   assert.equal(new TextDecoder().decode(recovered), 'Master-Secret-Key-777');
 });
 
-// 5. Poseidon BN254 ZK Hash
-test('Poseidon hash produces deterministic scalar output over BN254 prime field', async () => {
-  const p = 21888242871839275222246405745257275088548364400416034343698204186575808495617n;
-  const in1 = 123456789n % p;
-  const in2 = 987654321n % p;
-  assert.ok(in1 > 0n);
-  assert.ok(in2 > 0n);
-  assert.ok(p > (1n << 253n));
+// 5. Nonconforming cryptographic placeholders must not be exposed as secure algorithms.
+test('Poseidon and Balloon placeholders are explicitly disabled', async () => {
+  assert.throws(() => poseidonHash([1n, 2n]), /Poseidon hashing is disabled/);
+  await assert.rejects(() => balloonHash('password', 'salt'), /Balloon hashing is disabled/);
 });
 
 // 6. TOTP / HOTP (RFC 6238 / RFC 4226)

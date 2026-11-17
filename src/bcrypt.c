@@ -759,8 +759,8 @@ void bcrypt(uint32_t password_length, uint32_t cost_factor, uint32_t should_enco
   uint8_t setting[30];
   _crypt_gensalt_blowfish_rn("$2a", cost_factor, (char*)salt, (char*)setting);
 
-  uint8_t output[60];
-  _crypt_blowfish_rn((char*)key, password_length, (char*)setting, (char*)output, 60, should_encode);
+  uint8_t output[61];
+  _crypt_blowfish_rn((char*)key, password_length, (char*)setting, (char*)output, 61, should_encode);
 
   for (uint8_t i = 0; i < 60; i++) {
     main_buffer[i] = output[i];
@@ -773,8 +773,8 @@ uint32_t bcrypt_verify(uint32_t passwordLength) {
   uint8_t *key = &main_buffer[60];
   key[passwordLength] = 0;
 
-  uint8_t output[60];
-  _crypt_blowfish_rn((char*)key, passwordLength, (char*)main_buffer, (char*)output, 60, 1);
+  uint8_t output[61];
+  _crypt_blowfish_rn((char*)key, passwordLength, (char*)main_buffer, (char*)output, 61, 1);
 
   // 0-28 => setting
   // 29-59 => hash

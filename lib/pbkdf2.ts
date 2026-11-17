@@ -37,14 +37,14 @@ async function calculatePBKDF2(
 	outputType?: "hex" | "binary",
 ): Promise<Uint8Array | string> {
 	const DK = new Uint8Array(hashLength);
-	const block1 = new Uint8Array(salt.length + 4);
-	const block1View = new DataView(block1.buffer);
 	const saltBuffer = getUInt8Buffer(salt);
 	const saltUIntBuffer = new Uint8Array(
 		saltBuffer.buffer,
 		saltBuffer.byteOffset,
 		saltBuffer.length,
 	);
+	const block1 = new Uint8Array(saltUIntBuffer.byteLength + 4);
+	const block1View = new DataView(block1.buffer);
 	block1.set(saltUIntBuffer);
 
 	let destPos = 0;
@@ -55,7 +55,7 @@ async function calculatePBKDF2(
 	let U: Uint8Array = null;
 
 	for (let i = 1; i <= l; i++) {
-		block1View.setUint32(salt.length, i);
+		block1View.setUint32(saltUIntBuffer.byteLength, i);
 
 		digest.init();
 		digest.update(block1);
@@ -94,12 +94,12 @@ const validateOptions = (options: IPBKDF2Options) => {
 		);
 	}
 
-	if (!Number.isInteger(options.iterations) || options.iterations < 1) {
-		throw new Error("Iterations should be a positive number");
+	if (!Number.isSafeInteger(options.iterations) || options.iterations < 1 || options.iterations > 10_000_000) {
+		throw new Error("Iterations should be an integer from 1 to 10000000");
 	}
 
-	if (!Number.isInteger(options.hashLength) || options.hashLength < 1) {
-		throw new Error("Hash length should be a positive number");
+	if (!Number.isSafeInteger(options.hashLength) || options.hashLength < 1 || options.hashLength > 1_048_576) {
+		throw new Error("Hash length should be an integer from 1 to 1048576 bytes");
 	}
 
 	if (options.outputType === undefined) {

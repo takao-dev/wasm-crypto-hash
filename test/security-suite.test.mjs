@@ -163,11 +163,7 @@ test('7. Argon2id: verifies password with timing-safe comparison', async () => {
   assert.equal(invalid, false);
 });
 
-test('8. Poseidon & Balloon: computes deterministic ZK & memory-hard digests', async () => {
-  const poseidonDigest = poseidonHash([100n, 200n]);
-  assert.equal(typeof poseidonDigest, 'string');
-  assert.equal(poseidonDigest.length, 64);
-
-  const balloonDigest = await balloonHash('user-password', 'random-salt', 2, 8);
-  assert.equal(balloonDigest.length, 64);
+test('8. Nonconforming Poseidon & Balloon placeholders fail closed', async () => {
+  assert.throws(() => poseidonHash([100n, 200n]), /Poseidon hashing is disabled/);
+  await assert.rejects(() => balloonHash('user-password', 'random-salt', { spaceCost: 8, timeCost: 2 }), /Balloon hashing is disabled/);
 });

@@ -105,6 +105,40 @@ export function murmurHash3_128(key: Uint8Array | string, seed: number = 0): str
 		h4 = rotl32(h4, 13); h4 = (h4 + h1) >>> 0; h4 = (Math.imul(h4, 5) + 0x32ac3b17) >>> 0;
 	}
 
+	const tail = nblocks * 16;
+	const tailBytes = len & 15;
+	let k1 = 0;
+	let k2 = 0;
+	let k3 = 0;
+	let k4 = 0;
+	if (tailBytes >= 15) k4 ^= data[tail + 14] << 16;
+	if (tailBytes >= 14) k4 ^= data[tail + 13] << 8;
+	if (tailBytes >= 13) {
+		k4 ^= data[tail + 12];
+		k4 = Math.imul(k4, c4); k4 = rotl32(k4, 18); k4 = Math.imul(k4, c1); h4 ^= k4;
+	}
+	if (tailBytes >= 12) k3 ^= data[tail + 11] << 24;
+	if (tailBytes >= 11) k3 ^= data[tail + 10] << 16;
+	if (tailBytes >= 10) k3 ^= data[tail + 9] << 8;
+	if (tailBytes >= 9) {
+		k3 ^= data[tail + 8];
+		k3 = Math.imul(k3, c3); k3 = rotl32(k3, 17); k3 = Math.imul(k3, c4); h3 ^= k3;
+	}
+	if (tailBytes >= 8) k2 ^= data[tail + 7] << 24;
+	if (tailBytes >= 7) k2 ^= data[tail + 6] << 16;
+	if (tailBytes >= 6) k2 ^= data[tail + 5] << 8;
+	if (tailBytes >= 5) {
+		k2 ^= data[tail + 4];
+		k2 = Math.imul(k2, c2); k2 = rotl32(k2, 16); k2 = Math.imul(k2, c3); h2 ^= k2;
+	}
+	if (tailBytes >= 4) k1 ^= data[tail + 3] << 24;
+	if (tailBytes >= 3) k1 ^= data[tail + 2] << 16;
+	if (tailBytes >= 2) k1 ^= data[tail + 1] << 8;
+	if (tailBytes >= 1) {
+		k1 ^= data[tail];
+		k1 = Math.imul(k1, c1); k1 = rotl32(k1, 15); k1 = Math.imul(k1, c2); h1 ^= k1;
+	}
+
 	h1 ^= len; h2 ^= len; h3 ^= len; h4 ^= len;
 	h1 = (h1 + h2 + h3 + h4) >>> 0;
 	h2 = (h2 + h1) >>> 0;
@@ -115,6 +149,11 @@ export function murmurHash3_128(key: Uint8Array | string, seed: number = 0): str
 	h2 = fmix32(h2);
 	h3 = fmix32(h3);
 	h4 = fmix32(h4);
+
+	h1 = (h1 + h2 + h3 + h4) >>> 0;
+	h2 = (h2 + h1) >>> 0;
+	h3 = (h3 + h1) >>> 0;
+	h4 = (h4 + h1) >>> 0;
 
 	return [h1, h2, h3, h4].map(h => h.toString(16).padStart(8, "0")).join("");
 }

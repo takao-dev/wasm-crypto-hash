@@ -230,8 +230,8 @@ test('Scrypt options validations and output formats', async () => {
 test('PBKDF2 options validations and multi-block derivations', async () => {
   await assert.rejects(() => pbkdf2(null), /Invalid options parameter/);
   await assert.rejects(() => pbkdf2({ hashFunction: null }), /Invalid hash function is provided/);
-  await assert.rejects(() => pbkdf2({ hashFunction: createSHA256(), iterations: 0, hashLength: 32 }), /Iterations should be a positive number/);
-  await assert.rejects(() => pbkdf2({ hashFunction: createSHA256(), iterations: 1, hashLength: 0 }), /Hash length should be a positive number/);
+  await assert.rejects(() => pbkdf2({ hashFunction: createSHA256(), iterations: 0, hashLength: 32 }), /Iterations should be an integer from/);
+  await assert.rejects(() => pbkdf2({ hashFunction: createSHA256(), iterations: 1, hashLength: 0 }), /Hash length should be an integer from/);
   await assert.rejects(() => pbkdf2({ hashFunction: createSHA256(), iterations: 1, hashLength: 32, outputType: 'bad' }), /Insupported output type/);
 
   // Multi-block derivation (hashLength 64 with SHA-256 (32 bytes) requires 2 blocks)
@@ -298,13 +298,7 @@ test('AES-KW parameter error checking', async () => {
 });
 
 test('Poseidon input validations and plain string inputs', () => {
-  assert.throws(() => poseidonHash([]), /Poseidon requires at least one input element/);
-  assert.throws(() => poseidonHash(null), /Poseidon requires at least one input element/);
-  assert.throws(() => poseidonHash([true]), /Invalid Poseidon input type/);
-
-  // Plain string input without 0x prefix
-  const h = poseidonHash(['hello', 'world', 12345, 67890n]);
-  assert.match(h, /^[0-9a-f]{64}$/);
+  assert.throws(() => poseidonHash([1n]), /Poseidon hashing is disabled/);
 });
 
 test('Shamir secret sharing bounds checking', () => {
@@ -406,8 +400,8 @@ test('Algorithm parameter validation error branches', async () => {
 
   await assert.rejects(() => blake3('test', 256, 'bad_key'), /Key length must be exactly 32 bytes/);
   await assert.rejects(() => createBLAKE3(256, 'bad_key'), /Key length must be exactly 32 bytes/);
-  await assert.rejects(() => blake3('test', 999), /Invalid variant/);
-  await assert.rejects(() => createBLAKE3(999), /Invalid variant/);
+  await assert.rejects(() => blake3('test', 999), /byte-aligned/);
+  await assert.rejects(() => createBLAKE3(999), /byte-aligned/);
   const b3Key = new Uint8Array(32).fill(0x33);
   const b3Keyed = await blake3('test', 256, b3Key);
   assert.match(b3Keyed, /^[0-9a-f]{64}$/);
@@ -492,11 +486,8 @@ test('Bcrypt, Scrypt, PBKDF2 default outputType', async () => {
   assert.match(pb, /^[0-9a-f]{64}$/);
 });
 
-test('Poseidon 0x hex string and environment fallbacks', async () => {
-  // Poseidon with 0x prefix
-  const hHex = poseidonHash(['0x42', 100, 200n]);
-  assert.match(hHex, /^[0-9a-f]{64}$/);
-
+test('disabled Poseidon export fails closed and environment fallbacks', async () => {
+  assert.throws(() => poseidonHash(['0x42']), /Poseidon hashing is disabled/);
   // Missing getRandomValues error path
   const cryptoObj = getCrypto();
   const origGetRandomValues = cryptoObj ? cryptoObj.getRandomValues : undefined;
