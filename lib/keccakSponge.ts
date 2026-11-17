@@ -1,4 +1,3 @@
-const MASK64 = 0xffffffffffffffffn;
 const RHO = [0, 1, 62, 28, 27, 36, 44, 6, 55, 20, 3, 10, 43, 25, 39, 41, 45, 15, 21, 8, 18, 2, 61, 56, 14];
 const ROUND_CONSTANTS = [
 	0x0000000000000001n, 0x0000000000008082n, 0x800000000000808an, 0x8000000080008000n,
@@ -12,7 +11,7 @@ const ROUND_CONSTANTS = [
 function rotateLeft(value: bigint, shift: number): bigint {
 	if (shift === 0) return value;
 	const n = BigInt(shift);
-	return ((value << n) | (value >> (64n - n))) & MASK64;
+	return BigInt.asUintN(64, (value << n) | (value >> (64n - n)));
 }
 
 function permute(state: bigint[]): void {
@@ -21,14 +20,14 @@ function permute(state: bigint[]): void {
 		for (let x = 0; x < 5; x++) column[x] = state[x] ^ state[x + 5] ^ state[x + 10] ^ state[x + 15] ^ state[x + 20];
 		for (let x = 0; x < 5; x++) {
 			const delta = column[(x + 4) % 5] ^ rotateLeft(column[(x + 1) % 5], 1);
-			for (let y = 0; y < 5; y++) state[x + 5 * y] = (state[x + 5 * y] ^ delta) & MASK64;
+			for (let y = 0; y < 5; y++) state[x + 5 * y] = BigInt.asUintN(64, state[x + 5 * y] ^ delta);
 		}
 		const moved = new Array<bigint>(25).fill(0n);
 		for (let x = 0; x < 5; x++) for (let y = 0; y < 5; y++) {
 			moved[y + 5 * ((2 * x + 3 * y) % 5)] = rotateLeft(state[x + 5 * y], RHO[x + 5 * y]);
 		}
 		for (let y = 0; y < 5; y++) for (let x = 0; x < 5; x++) {
-			state[x + 5 * y] = (moved[x + 5 * y] ^ ((~moved[(x + 1) % 5 + 5 * y]) & moved[(x + 2) % 5 + 5 * y])) & MASK64;
+			state[x + 5 * y] = BigInt.asUintN(64, moved[x + 5 * y] ^ ((~moved[(x + 1) % 5 + 5 * y]) & moved[(x + 2) % 5 + 5 * y]));
 		}
 		state[0] ^= roundConstant;
 	}
