@@ -1,6 +1,7 @@
 /**
  * RFC 8439: ChaCha20 and Poly1305 for IETF Protocols
- * Pure TypeScript, zero-dependency, constant-time AEAD implementation.
+ * Pure TypeScript, zero-dependency AEAD implementation.
+ * JavaScript BigInt arithmetic does not provide a constant-time execution guarantee.
  */
 
 function rotl(a: number, b: number): number {
@@ -158,7 +159,7 @@ export async function chacha20Poly1305Decrypt(
 
 	const expectedTag = poly1305(polyKey, macData);
 
-	// Constant-time tag check
+	// Accumulate the tag difference without an early exit; JavaScript runtimes do not guarantee constant-time execution.
 	let diff = 0;
 	for (let i = 0; i < 16; i++) {
 		diff |= tag[i] ^ expectedTag[i];

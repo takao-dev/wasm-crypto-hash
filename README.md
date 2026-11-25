@@ -157,9 +157,12 @@ run();
 
 `wasm-crypto-hash` has first-class native support for Cloudflare Workers, Pages Functions, and edge runtimes via `"workerd"` conditional exports. No extra bundler plugins or `.wasm` file loaders are required!
 
+Set `API_SECRET` as a high-entropy Worker secret (for example, with `wrangler secret put API_SECRET`) using at least 32 random bytes. Call this endpoint only from a trusted backend that can hold the shared secret; never bundle it in browser code. This example verifies a caller-provided MAC and never returns a MAC for arbitrary caller input. Include a timestamp or nonce in authenticated data and reject replays for state-changing requests.
+
 ```typescript
 // worker.ts (Cloudflare Workers with Wrangler)
-import { sha256, kmac256, chacha20Poly1305Encrypt } from 'wasm-crypto-hash';
+import { sha256, kmac256 } from 'wasm-crypto-hash';
+import { timingSafeEqualString } from 'wasm-crypto-hash/util';
 
 export interface Env {
   API_SECRET: string;
@@ -167,15 +170,21 @@ export interface Env {
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
+    const secret = env.API_SECRET;
+    if (!secret || new TextEncoder().encode(secret).length < 32) {
+      return new Response('API_SECRET must be configured with at least 32 bytes', { status: 500 });
+    }
     const payload = await request.text();
+    const suppliedMac = request.headers.get('x-signature') ?? '';
+    const expectedMac = await kmac256(secret, payload, 256, 'my-worker');
+    if (!timingSafeEqualString(suppliedMac, expectedMac)) {
+      return new Response('Unauthorized', { status: 401 });
+    }
 
     // 1. Compute cryptographic hash in WASM at the edge
-    const digest = await sha256(payload || 'default-input');
+    const digest = await sha256(payload);
 
-    // 2. Compute KMAC256 message authentication with worker secret
-    const mac = await kmac256(env.API_SECRET || 'edge-secret-key', payload, 256, 'my-worker');
-
-    return new Response(JSON.stringify({ digest, mac, runtime: 'Cloudflare Workers (workerd)' }), {
+    return new Response(JSON.stringify({ digest, runtime: 'Cloudflare Workers (workerd)' }), {
       headers: { 'Content-Type': 'application/json' },
     });
   },

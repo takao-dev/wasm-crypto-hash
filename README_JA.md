@@ -38,7 +38,7 @@ WebAssembly バイナリと TypeScript を組み合わせた暗号ユーティ�
    - `package.json` の `exports` に `"workerd"` 条件分岐を整備し、Cloudflare Workers や Pages Functions 上でも設定ゼロで直接動作します（Cloudflare Workers 向け専用エクスポートを本パッケージに標準統合）。
 3. **リモート WASM 検証付き読み込み検証ローダー (`remoteWasmLoader.ts`)**:
    - CDN（unpkg, jsdelivr）やオブジェクトストレージ（Cloudflare R2, AWS S3）から WASM を動的フェッチする際にも、リアルタイムにダイジェストおよびデジタル署名を検証可能。
-4. **定時間比較によるタイミング攻撃（Side-Channel Attack）の排除**:
+4. **MAC比較時のタイミング差の低減**:
    - MAC照合には比較用ヘルパーを使用します。JavaScript実行環境全体の定時間性やタイミング攻撃への完全耐性を保証するものではありません。
 5. **次世代暗号プロトコルスイートの拡充**:
    - **NIST FIPS 203 ML-KEM-768 ハイブリッド鍵カプセル化**、**RFC 8439 ChaCha20-Poly1305 AEAD**、**NIST SP 800-185 KMAC256**、**FIPS 202 SHAKE256**、**シャミアの秘密分散法（SSS）** を含みます。`poseidon` と `balloon` は現在呼び出すとエラーになります。上記の互換性注記を参照してください。
@@ -58,7 +58,7 @@ WebAssembly バイナリと TypeScript を組み合わせた暗号ユーティ�
 | **BIP-39 (Mnemonic & Seed)** | ニーモニックKDF | 2 kB | Bitcoin / Web3 標準決定性シード生成 |
 | **BLAKE2b / BLAKE2s** | 暗号学的ハッシュ | 5 kB / 5 kB | RFC 7693 (WASM) |
 | **BLAKE3** | 暗号学的ハッシュ | 8 kB | ツリーハッシュ並列処理 (WASM) |
-| **ChaCha20-Poly1305** | 認証付き暗号 (AEAD) | 2 kB | RFC 8439 高速定時間暗号 |
+| **ChaCha20-Poly1305** | 認証付き暗号 (AEAD) | 2 kB | RFC 8439 |
 | **CRC32 / CRC64** | チェックサム | 2 kB / 2 kB | ISO 3309 / ECMA 182 (WASM) |
 | **HMAC** | メッセージ認証 | 1 kB | RFC 2104 |
 | **Keccak-224 / 256 / 384 / 512** | 暗号学的ハッシュ | 3 kB | オリジナル Keccak スポンジ関数 (WASM) |
@@ -154,9 +154,12 @@ const recoveredSecret = await pqcDecapsulate(ciphertext, recipient.privateKey);
 
 `wasm-crypto-hash` は `package.json` の `"workerd"` 条件分岐エクスポートに対応しているため、Wrangler や Cloudflare Pages 上で設定不要（プラグ＆プレイ）で動作します。
 
+`API_SECRET` には `wrangler secret put API_SECRET` などで登録した、暗号学的乱数による32バイト以上の秘密値を設定してください。共有秘密を保持できる信頼されたバックエンドからのみ呼び出し、ブラウザーのコードには含めないでください。この例はクライアントから受け取ったMACを検証し、任意の入力に対するMACを返しません。状態変更を伴うリクエストでは認証対象に時刻またはnonceを含め、リプレイを拒否してください。
+
 ```typescript
 // worker.ts (Cloudflare Workers)
-import { sha256, kmac256, chacha20Poly1305Encrypt } from 'wasm-crypto-hash';
+import { sha256, kmac256 } from 'wasm-crypto-hash';
+import { timingSafeEqualString } from 'wasm-crypto-hash/util';
 
 export interface Env {
   API_SECRET: string;
@@ -164,15 +167,21 @@ export interface Env {
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
+    const secret = env.API_SECRET;
+    if (!secret || new TextEncoder().encode(secret).length < 32) {
+      return new Response('API_SECRET は32バイト以上の秘密値として設定してください', { status: 500 });
+    }
     const payload = await request.text();
+    const suppliedMac = request.headers.get('x-signature') ?? '';
+    const expectedMac = await kmac256(secret, payload, 256, 'edge-api');
+    if (!timingSafeEqualString(suppliedMac, expectedMac)) {
+      return new Response('Unauthorized', { status: 401 });
+    }
 
     // 1. Edge 上で WebAssembly による超高速 SHA-256 計算
-    const digest = await sha256(payload || 'default-input');
+    const digest = await sha256(payload);
 
-    // 2. Workers 環境変数（シークレット）を用いた KMAC256 メッセージ認証
-    const mac = await kmac256(env.API_SECRET || 'edge-secret-key', payload, 256, 'edge-api');
-
-    return new Response(JSON.stringify({ digest, mac, runtime: 'Cloudflare Workers' }), {
+    return new Response(JSON.stringify({ digest, runtime: 'Cloudflare Workers' }), {
       headers: { 'Content-Type': 'application/json' },
     });
   },
