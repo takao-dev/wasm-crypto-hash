@@ -178,7 +178,7 @@ test('Bcrypt options validations and output formats', async () => {
   };
 
   await assert.rejects(() => bcrypt(null), /Invalid options parameter/);
-  await assert.rejects(() => bcrypt({ ...validOpts, costFactor: 2 }), /Cost factor should be a number between 4 and 31/);
+  await assert.rejects(() => bcrypt({ ...validOpts, costFactor: 2 }), /Cost factor should be a number between 4 and 16/);
   await assert.rejects(() => bcrypt({ ...validOpts, password: '' }), /Password should be at least 1 byte long/);
   await assert.rejects(() => bcrypt({ ...validOpts, password: 'a'.repeat(80) }), /Password should be at most 72 bytes long/);
   await assert.rejects(() => bcrypt({ ...validOpts, salt: new Uint8Array(10) }), /Salt should be 16 bytes long/);

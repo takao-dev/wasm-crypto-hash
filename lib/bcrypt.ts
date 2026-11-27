@@ -7,6 +7,8 @@ import {
 	intArrayToString,
 } from "./util";
 
+const MAX_BCRYPT_COST_FACTOR = 16;
+
 export interface BcryptOptions {
 	/**
 	 * Password to be hashed
@@ -17,7 +19,7 @@ export interface BcryptOptions {
 	 */
 	salt: IDataType;
 	/**
-	 * Number of iterations to perform (4 - 31)
+	 * Number of iterations to perform (4 - 16)
 	 */
 	costFactor: number;
 	/**
@@ -63,9 +65,9 @@ const validateOptions = (options: BcryptOptions) => {
 	if (
 		!Number.isInteger(options.costFactor) ||
 		options.costFactor < 4 ||
-		options.costFactor > 31
+		options.costFactor > MAX_BCRYPT_COST_FACTOR
 	) {
-		throw new Error("Cost factor should be a number between 4 and 31");
+		throw new Error(`Cost factor should be a number between 4 and ${MAX_BCRYPT_COST_FACTOR}`);
 	}
 
 	options.password = getUInt8Buffer(options.password);
@@ -153,6 +155,9 @@ const validateVerifyOptions = (options: BcryptVerifyOptions) => {
 
 	if (!validateHashCharacters(options.hash)) {
 		throw new Error("Invalid hash");
+	}
+	if (Number(options.hash.slice(4, 6)) > MAX_BCRYPT_COST_FACTOR) {
+		throw new RangeError(`bcrypt cost factor must not exceed ${MAX_BCRYPT_COST_FACTOR}`);
 	}
 
 	options.password = getUInt8Buffer(options.password);

@@ -12,6 +12,12 @@ import {
 	timingSafeEqualString,
 } from "./util";
 
+const MAX_ARGON2_MEMORY_KIB = 64 * 1024;
+const MAX_ARGON2_ITERATIONS = 10;
+const MAX_ARGON2_PARALLELISM = 16;
+const MAX_ARGON2_HASH_BYTES = 1024;
+const MAX_ARGON2_PHC_CHARS = 16_384;
+
 export interface IArgon2Options {
 	/**
 	 * Password (or message) to be hashed
@@ -233,24 +239,27 @@ const validateOptions = (options: IArgon2Options) => {
 
 	options.secret = getUInt8Buffer(options.secret ?? "");
 
-	if (!Number.isInteger(options.iterations) || options.iterations < 1) {
-		throw new Error("Iterations should be a positive number");
+	if (!Number.isSafeInteger(options.iterations) || options.iterations < 1 || options.iterations > MAX_ARGON2_ITERATIONS) {
+		throw new Error(`Iterations should be a positive number (integer from 1 to ${MAX_ARGON2_ITERATIONS})`);
 	}
 
-	if (!Number.isInteger(options.parallelism) || options.parallelism < 1) {
-		throw new Error("Parallelism should be a positive number");
+	if (!Number.isSafeInteger(options.parallelism) || options.parallelism < 1 || options.parallelism > MAX_ARGON2_PARALLELISM) {
+		throw new Error(`Parallelism should be a positive number (integer from 1 to ${MAX_ARGON2_PARALLELISM})`);
 	}
 
-	if (!Number.isInteger(options.hashLength) || options.hashLength < 4) {
-		throw new Error("Hash length should be at least 4 bytes.");
+	if (!Number.isSafeInteger(options.hashLength) || options.hashLength < 4 || options.hashLength > MAX_ARGON2_HASH_BYTES) {
+		throw new Error(`Hash length should be at least 4 bytes and no more than ${MAX_ARGON2_HASH_BYTES}`);
 	}
 
-	if (!Number.isInteger(options.memorySize)) {
+	if (!Number.isSafeInteger(options.memorySize)) {
 		throw new Error("Memory size should be specified.");
 	}
 
 	if (options.memorySize < 8 * options.parallelism) {
 		throw new Error("Memory size should be at least 8 * parallelism.");
+	}
+	if (options.memorySize > MAX_ARGON2_MEMORY_KIB) {
+		throw new Error(`Memory size must not exceed ${MAX_ARGON2_MEMORY_KIB} KiB`);
 	}
 
 	if (options.outputType === undefined) {
@@ -335,6 +344,7 @@ const getHashParameters = (
 	encoded: string,
 	secret?: IDataType,
 ): IArgon2OptionsExtended => {
+	if (encoded.length > MAX_ARGON2_PHC_CHARS) throw new Error("Invalid hash");
 	const regex =
 		/^\$argon2(id|i|d)\$v=([0-9]+)\$((?:[mtp]=[0-9]+,){2}[mtp]=[0-9]+)\$([A-Za-z0-9+/]+)\$([A-Za-z0-9+/]+)$/;
 	const match = encoded.match(regex);

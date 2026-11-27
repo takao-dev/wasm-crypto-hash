@@ -7,14 +7,11 @@ This example demonstrates a minimal Cloudflare Worker that:
 - compiles and instantiates the WASM module if verification succeeds
 
 Usage:
-- Deploy the worker or run with `wrangler` in a dev environment.
-- Ensure the Worker runtime has the public key available in `globalThis.__WASM_SIG_PUBKEY`.
-- Query the worker with `?wasm=https://cdn.example.com/example.wasm.json`.
+- Set `__WASM_MANIFEST_URL` and `__WASM_SIG_PUBKEY` as Worker environment bindings (or local development variables). The manifest URL must be a trusted HTTPS URL.
+- Deploy the worker or run it with `wrangler dev`.
+- The worker loads only that configured manifest. Request query parameters cannot select an artifact or disable verification.
+- The artifact must include a valid `sig` generated with RSASSA-PSS and the matching trusted public key. Unsigned metadata is rejected.
 
 Notes:
-- This is a PoC. For production, ensure streaming instantiate (`instantiateStreaming`) is used when serving raw `.wasm` from CDN, and trust root distribution is secure.
-- Add timeouts and size checks to avoid DoS from large WASM binaries.
-
-Bundle size (gzipped):
-
-- `worker.dev.js` (gzipped): 858 bytes (~0.84 KB)
+- Manifest fetches reject redirects, time out after 10 seconds, and stop reading above 24 MiB. Decoded WASM is limited to 16 MiB.
+- This is still a PoC. Keep the signing private key outside the Worker, distribute the public key through trusted Worker configuration, and review runtime-specific execution limits before production use.

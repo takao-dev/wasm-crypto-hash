@@ -54,6 +54,15 @@ export interface TotpOptions {
 	algorithm?: "sha1" | "sha256";
 }
 
+const MAX_OTP_DIGITS = 10;
+const MAX_TOTP_WINDOW = 10;
+
+function validateOtpDigits(digits: number): void {
+	if (!Number.isInteger(digits) || digits < 1 || digits > MAX_OTP_DIGITS) {
+		throw new RangeError(`OTP digits must be an integer from 1 to ${MAX_OTP_DIGITS}`);
+	}
+}
+
 /**
  * Calculates HMAC-based One-Time Password (HOTP / RFC 4226)
  */
@@ -63,6 +72,7 @@ export async function hotp(
 	digits: number = 6,
 	algorithm: "sha1" | "sha256" = "sha1",
 ): Promise<string> {
+	validateOtpDigits(digits);
 	const keyBytes = typeof key === "string"
 		? (isBase32Pattern(key) ? decodeBase32(key) : new TextEncoder().encode(key))
 		: key;
@@ -112,7 +122,11 @@ export async function verifyTotp(
 ): Promise<boolean> {
 	const step = options.step ?? 30;
 	const digits = options.digits ?? 6;
+	validateOtpDigits(digits);
 	const window = options.window ?? 1; // default check +/- 1 step (30s)
+	if (!Number.isInteger(window) || window < 0 || window > MAX_TOTP_WINDOW) {
+		throw new RangeError(`TOTP window must be an integer from 0 to ${MAX_TOTP_WINDOW}`);
+	}
 	const time = options.timestamp ?? Date.now();
 	const currentCounter = Math.floor(time / 1000 / step);
 

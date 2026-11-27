@@ -85,6 +85,7 @@ async function scryptInternal(
 
 const isPowerOfTwo = (v: number): boolean => v && !(v & (v - 1));
 const MAX_SCRYPT_MEMORY_BYTES = 64 * 1024 * 1024;
+const MAX_SCRYPT_WORK_FACTOR = 4_194_304;
 
 const validateOptions = (options: ScryptOptions) => {
 	if (!options || typeof options !== "object") {
@@ -118,6 +119,10 @@ const validateOptions = (options: ScryptOptions) => {
 	const totalBytes = blockBytes + vBytes + xyBytes;
 	if (![blockBytes, vBytes, xyBytes, totalBytes].every(Number.isSafeInteger) || totalBytes > MAX_SCRYPT_MEMORY_BYTES) {
 		throw new Error('scrypt memory requirement exceeds the 64 MiB safety limit');
+	}
+	const workFactor = options.costFactor * options.blockSize * options.parallelism;
+	if (!Number.isSafeInteger(workFactor) || workFactor > MAX_SCRYPT_WORK_FACTOR) {
+		throw new Error(`scrypt work factor exceeds the ${MAX_SCRYPT_WORK_FACTOR} safety limit`);
 	}
 
 	if (options.outputType === undefined) {

@@ -1,8 +1,4 @@
 name = "wasm-crypto-hash-worker-poc"
 main = "worker.dev.js"
 compatibility_date = "2026-05-25"
-type = "javascript"
-
-[vars]
-# Dev placeholder; real public key should be injected securely in production
-__WASM_SIG_PUBKEY = "-----BEGIN PUBLIC KEY-----\nMFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBALe...placeholder...\n-----END PUBLIC KEY-----"
+# Set __WASM_MANIFEST_URL and __WASM_SIG_PUBKEY with local dev vars or Worker bindings.

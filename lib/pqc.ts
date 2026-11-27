@@ -20,8 +20,12 @@ function pack(tag: string, first: Uint8Array, second: Uint8Array): Uint8Array {
 	return out;
 }
 function unpack(tag: string, input: Uint8Array): [Uint8Array, Uint8Array] {
+	if (!ArrayBuffer.isView(input) || Object.prototype.toString.call(input) !== "[object Uint8Array]" ||
+		input.byteLength < 12 || input.byteLength > 16384) {
+		throw new Error("Invalid or legacy hybrid envelope");
+	}
 	const bytes = new Uint8Array(input);
-	if (bytes.length < 12 || bytes.length > 16384 || new TextDecoder().decode(bytes.subarray(0, 6)) !== tag) {
+	if (new TextDecoder().decode(bytes.subarray(0, 6)) !== tag) {
 		throw new Error("Invalid or legacy hybrid envelope");
 	}
 	const length = new DataView(bytes.buffer).getUint32(6);

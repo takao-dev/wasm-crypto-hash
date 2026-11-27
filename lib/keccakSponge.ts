@@ -8,6 +8,8 @@ const ROUND_CONSTANTS = [
 	0x8000000080008081n, 0x8000000000008080n, 0x0000000080000001n, 0x8000000080008008n,
 ];
 
+const MAX_SPONGE_OUTPUT_BYTES = 1_048_576;
+
 function rotateLeft(value: bigint, shift: number): bigint {
 	if (shift === 0) return value;
 	const n = BigInt(shift);
@@ -72,7 +74,9 @@ export class Keccak256Sponge {
 
 	digest(outputBytes: number, suffix: 0x1f | 0x04 = 0x1f): Uint8Array {
 		if (this.finalized) throw new Error('Sponge has already been finalized');
-		if (!Number.isSafeInteger(outputBytes) || outputBytes < 1) throw new RangeError('Output size must be a positive safe integer');
+		if (!Number.isSafeInteger(outputBytes) || outputBytes < 1 || outputBytes > MAX_SPONGE_OUTPUT_BYTES) {
+			throw new RangeError(`Output size must be an integer from 1 to ${MAX_SPONGE_OUTPUT_BYTES} bytes`);
+		}
 		this.buffer[this.buffered] ^= suffix;
 		this.buffer[135] ^= 0x80;
 		absorb(this.state, this.buffer);

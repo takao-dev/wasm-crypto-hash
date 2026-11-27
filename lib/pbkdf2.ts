@@ -113,6 +113,8 @@ const validateOptions = (options: IPBKDF2Options) => {
 	}
 };
 
+const MAX_PBKDF2_PRF_ITERATIONS = 2_000_000;
+
 interface IPBKDF2OptionsBinary {
 	outputType: "binary";
 }
@@ -128,6 +130,10 @@ export async function pbkdf2<T extends IPBKDF2Options>(
 	validateOptions(options);
 
 	const hmac = await createHMAC(options.hashFunction, options.password);
+	const workFactor = options.iterations * Math.ceil(options.hashLength / hmac.digestSize);
+	if (!Number.isSafeInteger(workFactor) || workFactor > MAX_PBKDF2_PRF_ITERATIONS) {
+		throw new RangeError(`PBKDF2 work factor exceeds the ${MAX_PBKDF2_PRF_ITERATIONS} safety limit`);
+	}
 	return calculatePBKDF2(
 		hmac,
 		options.salt,

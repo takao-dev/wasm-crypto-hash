@@ -1,7 +1,7 @@
 const http = require('http');
 const { performance } = require('perf_hooks');
 
-const url = 'http://127.0.0.1:8787/?skipSig=1';
+const url = 'http://127.0.0.1:8787/';
 const N = 20;
 
 function requestOnce() {

@@ -6,6 +6,7 @@ const require = createRequire(import.meta.url);
 if (!globalThis.crypto) Object.defineProperty(globalThis, 'crypto', {configurable:true,value:webcrypto});
 const api = require('../dist/lib/index.js');
 const {fetchAndInstantiateWasm} = require('../dist/lib/remoteWasmLoader.js');
+const {keccakSponge256} = require('../dist/lib/keccakSponge.js');
 const {canonicalizeWasmForSigning} = require('../dist/lib/util.js');
 const {WASMInterface} = require('../dist/lib/WASMInterface.js');
 const embedded = require('../dist/wasm/sha256.wasm.json');
@@ -151,6 +152,35 @@ test('remote WASM pins apply to JSON and binary, signatures and HMAC fail closed
  }
 });
 
+test('remote WASM loader applies response-size and request-time limits', async () => {
+ const originalFetch = globalThis.fetch;
+ const wasm = new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]);
+ const pin = createHash('sha256').update(wasm).digest('hex');
+ try {
+  globalThis.fetch = async (_url, options) => {
+   assert.equal(options.redirect, 'error');
+   return new Response(new Uint8Array(9), { headers: { 'Content-Type': 'application/wasm' } });
+  };
+  await assert.rejects(
+   () => fetchAndInstantiateWasm('https://example.invalid/a.wasm', { sha256: pin }, {}, { maxResponseBytes: 8 }),
+   /response exceeds the configured size limit/,
+  );
+  await assert.rejects(
+   () => fetchAndInstantiateWasm('https://example.invalid/a.wasm', { sha256: pin }, {}, { maxResponseBytes: 65 * 1024 * 1024 }),
+   /maxResponseBytes/,
+  );
+  globalThis.fetch = async (_url, { signal }) => new Promise((_, reject) => {
+   signal.addEventListener('abort', () => reject(signal.reason), { once: true });
+  });
+  await assert.rejects(
+   () => fetchAndInstantiateWasm('https://example.invalid/a.wasm', { sha256: pin }, {}, { timeoutMs: 5 }),
+   /timed out/,
+  );
+ } finally {
+  globalThis.fetch = originalFetch;
+ }
+});
+
 test('embedded WASM validates each policy and content even after cache warmup',async()=>{
  await WASMInterface({...embedded},32);
  await assert.rejects(()=>WASMInterface({...embedded,sha256:'0'.repeat(64)},32),/mismatch/);
@@ -185,4 +215,39 @@ test('failed verification releases mutexes and convenience caches cannot retain 
   assert.throws(()=>fresh.update('blocked'),/policy changed/);
  } finally {if(old===undefined)delete globalThis.__WASM_SIG_PUBKEY;else globalThis.__WASM_SIG_PUBKEY=old;}
  assert.equal(await api.sha256('abc'),createHash('sha256').update('abc').digest('hex'));
+});
+
+test('attacker-controlled KDF and OTP parameters are bounded before expensive work', async () => {
+ await assert.rejects(() => api.hotp('JBSWY3DPEHPK3PXP', 1, 11), /OTP digits/);
+ await assert.rejects(() => api.verifyTotp('000000', 'JBSWY3DPEHPK3PXP', { window: 11 }), /TOTP window/);
+ await assert.rejects(() => api.verifyTotp('000000', 'JBSWY3DPEHPK3PXP', { window: 1.5 }), /TOTP window/);
+ await assert.rejects(() => api.argon2Verify({
+  password: 'pw',
+  hash: '$argon2id$v=19$m=65537,t=1,p=1$YWJjZGVmZ2g$YWJjZA',
+ }), /Memory size must not exceed/);
+ await assert.rejects(() => api.bcryptVerify({
+  password: 'pw',
+  hash: '$2b$17$' + 'a'.repeat(53),
+ }), /cost factor must not exceed/);
+ await assert.rejects(() => api.scrypt({
+  password: 'pw', salt: 'salt', costFactor: 32768, blockSize: 1,
+  parallelism: 450000, hashLength: 1, outputType: 'binary',
+ }), /work factor/);
+ await assert.rejects(() => api.pbkdf2({
+  password: 'pw', salt: 'salt', iterations: 2_000_001, hashLength: 32,
+  hashFunction: api.createSHA256(), outputType: 'binary',
+ }), /work factor/);
+ assert.throws(() => keccakSponge256(new Uint8Array(0), 1_048_577), /Output size/);
+});
+
+test('hybrid envelope size is checked before copying attacker input', async () => {
+ const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'crypto');
+ Object.defineProperty(globalThis, 'crypto', { configurable: true, value: { subtle: {
+  encapsulateBits() {}, decapsulateBits() {},
+ } } });
+ try {
+  await assert.rejects(() => api.pqcEncapsulate(new Uint8Array(16_385)), /envelope/);
+ } finally {
+  Object.defineProperty(globalThis, 'crypto', descriptor);
+ }
 });

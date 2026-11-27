@@ -1,30 +1,10 @@
-Cloudflare Worker サンプル（署名検証）
+# wasm-crypto-hash Cloudflare Worker サンプル
 
-このディレクトリには、署名済みの `.wasm.json` を検証する簡単な Cloudflare Worker の例があります。
+`worker.dev.js` と `worker.js` は `worker.core.mjs` を使うモジュール形式のWorkerです。`wrangler.toml` から起動し、ローカルでは `.dev.vars`、デプロイ時はWorkerの環境バインディングに次を設定します。
 
-使い方（概要）:
+- `__WASM_MANIFEST_URL`: 信頼する署名済み `.wasm.json` のHTTPS URL。
+- `__WASM_SIG_PUBKEY`: 署名の確認に使うPEM公開鍵。秘密鍵はWorkerに設定しないでください。
 
-- Worker をデプロイする際に、公開鍵（PEM）を `WASM_SIG_PUBKEY` として Worker Secret に登録してください。
-- `worker.mjs` は埋め込みの `example.signed.wasm.json` を読み取り、`lib/util` の `canonicalizeWasmForSigning` と `verifyRsaSignatureBase64` を使って検証します。
+リクエストのクエリから取得先を選ぶ機能や署名検証を無効にする機能はありません。リダイレクトを拒否し、取得を10秒・24 MiB、展開後のWASMを16 MiBに制限します。署名なし、または不正な署名のデータは実行しません。
 
-wrangler.toml の例:
-
-```
-name = "wasm-crypto-hash-verify-example"
-main = "./worker.mjs"
-
-[vars]
-# 代替: Secret を使う場合は wrangler secret に設定してここでは参照しない
-# WASM_SIG_PUBKEY = "-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----"
-```
-
-Secret 登録例:
-
-```bash
-wrangler secret put WASM_SIG_PUBKEY < public.pem
-```
-
-注意:
-
-- 実行環境では `fetch(meta.data)` が利用可能で、`meta.data` は署名付き JSON の `data` フィールドに設定された URL/パスを指します。
-- このサンプルは概念実証（PoC）用途です。本番ではエラーハンドリング、ログ、rate-limit、公開鍵のローテーションなどを強化してください。
+このコードは概念実証です。本番利用前に、署名鍵の管理・公開鍵の更新手順・Workerの実行制限を確認してください。
